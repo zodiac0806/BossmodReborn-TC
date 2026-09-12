@@ -58,16 +58,23 @@ class E4STitanStates : StateMachineBuilder
             .ActivateOnEnter<WeightOfTheWorld>()
             .ActivateOnEnter<GraniteGaol>()
             .ActivateOnEnter<PlateFracture>()
-            // NEVER end this phase from the state machine. At Orogenesis, Titan (the primary actor)
-            // despawns and respawns - `IsDeadOrDestroyed` there would end the only phase, leaving
-            // StateMachine.ActivePhase == null. When that happens AIHintsBuilder stops treating this
-            // as an active module, so BossModule.CalculateAIHints (which sets hints.PathfindMapCenter
-            // to the arena centre every frame) never runs -> the pathfinding map stays centred on
-            // (0,0), the player's cell falls outside the window, and AI navigation locks up with
-            // per-frame "can't compute destination" spam (= the in-combat stutter that was reported).
-            // Module teardown on a real kill / wipe / zone change is BossModuleManager's job, not the
-            // state machine's.
-            .Raw.Update = () => false;
+            // Don't end this phase on `IsDeadOrDestroyed` - at Orogenesis, Titan (the primary actor)
+            // despawns and respawns *while still in the same duty*, and ending the only phase there
+            // would leave StateMachine.ActivePhase == null. When that happens AIHintsBuilder stops
+            // treating this as an active module, so BossModule.CalculateAIHints (which sets
+            // hints.PathfindMapCenter to the arena centre every frame) never runs -> the pathfinding
+            // map stays centred on (0,0), the player's cell falls outside the window, and AI
+            // navigation locks up with per-frame "can't compute destination" spam (= the in-combat
+            // stutter that was reported).
+            // BUT BossModuleManager only ever unloads a module when its StateMachine.ActiveState
+            // transitions to null (see BossModuleManager.Update's `!isActive` check) - there is no
+            // separate zone-change purge. `PrimaryActor.IsDestroyed` alone is NOT checked while a
+            // module is active, so an unconditional `() => false` here means the module (and its AI
+            // forbidden zones/goal zones) never unloads even after leaving the duty - the AI kept
+            // "dodging" Titan mechanics outside E4S. Zone/CFC leaving is unambiguous (Orogenesis
+            // respawns happen without a zone change), so gate on that instead - same idiom as
+            // Naadam/EmissaryOfTheDawn/TheGreatShipVylbrand etc. (`CurrentCFCID != <this fight's CFC>`).
+            .Raw.Update = () => Module.WorldState.CurrentCFCID != 690;
     }
 
     private void SinglePhase(uint id) => SimpleState(id, 10000f, "Titan mechanics (reactive, no fixed timeline)");
