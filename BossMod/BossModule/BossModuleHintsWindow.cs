@@ -6,11 +6,13 @@ public sealed class BossModuleHintsWindow : UIWindow
 {
     private readonly BossModuleManager _mgr;
     private readonly ZoneModuleManager _zmm;
+    private readonly Action _openConfig;
 
-    public BossModuleHintsWindow(BossModuleManager mgr, ZoneModuleManager zmm) : base("Boss module hints", false, new(400, 100))
+    public BossModuleHintsWindow(BossModuleManager mgr, ZoneModuleManager zmm, Action openConfig) : base("Boss module hints", false, new(400, 100))
     {
         _mgr = mgr;
         _zmm = zmm;
+        _openConfig = openConfig;
         RespectCloseHotkey = false;
     }
 
@@ -47,6 +49,8 @@ public sealed class BossModuleHintsWindow : UIWindow
                 _mgr.ActiveModule = null;
             }
         }
+
+        RadarContextMenu.Draw(_mgr, _openConfig);
     }
 
     private bool ShowZoneModule() => _mgr.ActiveModule?.StateMachine.ActivePhase == null && (_zmm.ActiveModule?.WantDrawHints() ?? false);

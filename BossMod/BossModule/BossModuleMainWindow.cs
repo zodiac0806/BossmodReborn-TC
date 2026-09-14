@@ -7,13 +7,15 @@ public sealed class BossModuleMainWindow : UIWindow
 {
     private readonly BossModuleManager _mgr;
     private readonly ZoneModuleManager _zmm;
+    private readonly Action _openConfig;
 
     private const string _windowID = "###Boss module";
 
-    public BossModuleMainWindow(BossModuleManager mgr, ZoneModuleManager zmm) : base(_windowID, false, new(400, 400))
+    public BossModuleMainWindow(BossModuleManager mgr, ZoneModuleManager zmm, Action openConfig) : base(_windowID, false, new(400, 400))
     {
         _mgr = mgr;
         _zmm = zmm;
+        _openConfig = openConfig;
         RespectCloseHotkey = false;
         TitleBarButtons.Add(new() { Icon = FontAwesomeIcon.Cog, IconOffset = new(1), Click = _ => OpenModuleConfig() });
     }
@@ -91,6 +93,8 @@ public sealed class BossModuleMainWindow : UIWindow
                     _mgr.ActiveModule = m;
             }
         }
+
+        RadarContextMenu.Draw(_mgr, _openConfig);
     }
 
     private void DrawMovementHints(BossComponent.MovementHints? arrows, float y)

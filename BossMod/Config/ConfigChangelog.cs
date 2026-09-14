@@ -59,6 +59,20 @@ public sealed class ConfigChangelogWindow : UIWindow
         // 🔴 .94 只涵蓋「BMR 自己注入移動輸入」那條路。深牢的「走到房間」是 vnavmesh 在走的,
         //    完全不經過 BMR 的 detour ⇒ 當時按住 Alt 對它沒有任何效果,而 .94 的提示也是這樣寫的。
         //    這一則就是把那句話推翻掉,所以必須登記:使用者讀過舊提示,不講他不會知道行為變了。
+
+        // 沒有新增任何設定，但「右鍵雷達什麼都不會發生」變成了「會開選單」——
+        // 而且它是唯一的入口：預設的透明雷達沒有標題列，齒輪與關閉鈕根本畫不出來。
+        new("7.20.0.110", ChangelogKind.ChangedBehaviour, null, null,
+            "CHANGELOG_RadarContextMenu",
+            "Right-clicking the radar (or the separate hints window) now opens a menu. " +
+            "It holds this encounter's own settings, \"deactivate current module\", the arena scale, " +
+            "the display toggles you change most often, and the lock. " +
+            "This matters because the default transparent radar has no title bar at all, " +
+            "so the cog and close buttons that used to sit there were never drawn - " +
+            "encounter-specific settings could only be reached through the \"Supported bosses\" tab. " +
+            "Nothing changed for you if you right-click elsewhere; locking the radar still disables " +
+            "all of its mouse input, this menu included."),
+
         new("7.20.0.95", ChangelogKind.ChangedBehaviour, typeof(ActionTweaksConfig), nameof(ActionTweaksConfig.PauseAutoMoveKey),
             "CHANGELOG_DeepDungeonWalkPause",
             "The pause-automatic-movement key now covers the deep dungeon \"Walk to room\" button as well. That route is walked by vnavmesh rather than by BossMod, so it used to ignore the key entirely - the option's own tooltip said so. BossMod now asks vnavmesh to hold still while the key is held and releases it the moment you let go. The computed route is kept, so you carry on from wherever you are standing instead of re-pathing or backtracking."),

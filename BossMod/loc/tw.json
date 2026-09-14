@@ -8614,5 +8614,26 @@
   },
   "MODCAT_PvP": {
     "message": "PvP"
+  },
+  "RADAR_ModuleSettings": {
+    "message": "本場模組設定…"
+  },
+  "RADAR_NoModuleTip": {
+    "message": "目前沒有啟用中的戰鬥模組，所以沒有這一場專屬的設定可以調。"
+  },
+  "RADAR_Deactivate": {
+    "message": "停用目前模組（回到模組清單）"
+  },
+  "RADAR_Display": {
+    "message": "雷達顯示"
+  },
+  "RADAR_PluginSettings": {
+    "message": "BossModReborn 設定…"
+  },
+  "RADAR_LockTip": {
+    "message": "鎖定之後雷達完全不吃滑鼠輸入，這個右鍵選單也會跟著打不開——要解除鎖定請到設定視窗的「Boss模組與雷達」分頁。"
+  },
+  "CHANGELOG_RadarContextMenu": {
+    "message": "在雷達（或獨立的提示視窗）上按右鍵，現在會開出一個選單：這一場專屬的模組設定、停用目前模組、地圖縮放、最常調的幾個顯示開關，以及鎖定。這件事之所以重要，是因為預設的透明雷達根本沒有標題列，原本放在那裡的齒輪與關閉鈕從來沒有被畫出來——這一場的模組設定過去只能從「支援的戰鬥」分頁一層一層翻進去。在別處按右鍵的行為完全沒變；鎖定雷達一樣會關掉它所有的滑鼠輸入，包含這個選單。"
   }
 }

@@ -153,8 +153,8 @@ public sealed class Plugin : IDalamudPlugin
         _broadcast = new();
         _ipc = new(_bossmod, _hints, _rotation, _amex, _movementOverride, _ai);
         _dtr = new(_rotation, _ai, () => OpenConfigUI());
-        _wndBossmod = new(_bossmod, _zonemod);
-        _wndBossmodHints = new(_bossmod, _zonemod);
+        _wndBossmod = new(_bossmod, _zonemod, () => OpenConfigUI());
+        _wndBossmodHints = new(_bossmod, _zonemod, () => OpenConfigUI());
         _wndZone = new(_zonemod);
         var config = Service.Config.Get<ReplayManagementConfig>();
         var replayDir = string.IsNullOrEmpty(config.ReplayFolder) ? dalamud.ConfigDirectory.FullName + "/replays" : config.ReplayFolder;
