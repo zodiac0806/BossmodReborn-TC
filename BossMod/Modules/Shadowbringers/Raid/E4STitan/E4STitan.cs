@@ -1,5 +1,10 @@
 namespace BossMod.Shadowbringers.Raid.E4STitan;
 
+// VERIFICATION SUMMARY: only P1 (小泰坦/Titan phase) mechanics are confirmed against a real replay.
+// Every P2/Titan-Maximum and P3 mechanic below is either estimated from cactbot/huijiwiki or explicitly
+// marked non-functional/unverified in its own comment - the analysed pull never got a clean run past
+// the first Orogenesis. Don't treat a P2/P3 component's presence as proof it dodges correctly in-game.
+//
 // NOTE (WIP): originally hand-built from cactbot's e4s.ts data; ability IDs / cast times / caster OIDs
 // have since been cross-checked against a real replay (see E4STitanEnums.cs header). Shapes/radii of
 // the newly-wired AOE components (Weight of the Land / Evil Earth / Giant Rock puddles) are still
