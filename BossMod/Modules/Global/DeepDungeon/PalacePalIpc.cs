@@ -48,6 +48,24 @@ static class PalacePalIpc
         new(() => Service.PluginInterface?.GetIpcSubscriber<ushort, List<Vector3>>("PalacePal.GetHoardLocations"));
 
     /// <summary>
+    /// 「現在真的看得到什麼」那組端點的版本線，與 <see cref="SupportedApiVersion"/> 各自獨立。
+    /// </summary>
+    /// <remarks>
+    /// 🔑 這條判 <c>&gt;=</c>：對方新能力一律開新端點名，提高版本不代表既有語意變了。
+    /// 🔴 舊那條的 <c>==</c> 是已經出貨的合約，不要跟著改。
+    /// </remarks>
+    public const int SupportedVisibleApiVersion = 1;
+
+    private static readonly Lazy<ICallGateSubscriber<int>?> VisibleApiVersion =
+        new(() => Service.PluginInterface?.GetIpcSubscriber<int>("PalacePal.VisibleLocationApiVersion"));
+
+    private static readonly Lazy<ICallGateSubscriber<ushort, List<Vector3>>?> VisibleHoardLocations =
+        new(() => Service.PluginInterface?.GetIpcSubscriber<ushort, List<Vector3>>("PalacePal.GetVisibleHoardLocations"));
+
+    private static readonly Lazy<ICallGateSubscriber<ushort, int>?> VisibleAgeMillis =
+        new(() => Service.PluginInterface?.GetIpcSubscriber<ushort, int>("PalacePal.GetVisibleLocationsAgeMillis"));
+
+    /// <summary>
     /// 對方在不在、而且說得出我們認得的合約版本。
     /// </summary>
     /// <remarks>
@@ -90,6 +108,58 @@ static class PalacePalIpc
     /// </para>
     /// </remarks>
     public static List<Vector3>? GetHoards(ushort territory) => Fetch(HoardLocations, "GetHoardLocations", territory);
+
+    /// <summary>對方有沒有「現在真的看得到什麼」那組端點。沒裝／舊版都回 false，不擲例外。</summary>
+    public static bool IsVisibleApiAvailable()
+    {
+        try
+        {
+            if (VisibleApiVersion.Value is not { } g)
+                return false;
+            return g.InvokeFunc() >= SupportedVisibleApiVersion;
+        }
+        catch (IpcError)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogUnexpected("VisibleLocationApiVersion", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// PalacePal 這一幀真的看得到的埋藏寶藏座標；<c>null</c>＝不知道（沒裝／舊版／快照太舊）。
+    /// </summary>
+    /// <remarks>
+    /// 🔴 <c>null</c>＝不知道，空清單＝知道而且是 0 個，呼叫端不可以把兩者當成同一件事。
+    /// 🔑 先問快照年齡再要座標：PalacePal 裝著但沒在深牢裡跑時端點照樣在，回的是殘影。
+    /// </remarks>
+    public static List<Vector3>? GetVisibleHoards(ushort territory, int maxAgeMillis)
+    {
+        if (!IsVisibleApiAvailable())
+            return null;
+
+        try
+        {
+            if (VisibleAgeMillis.Value is not { } age)
+                return null;
+            var ms = age.InvokeFunc(territory);
+            if (ms < 0 || ms > maxAgeMillis)
+                return null;
+            return VisibleHoardLocations.Value?.InvokeFunc(territory);
+        }
+        catch (IpcError)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LogUnexpected("GetVisibleHoardLocations", ex);
+            return null;
+        }
+    }
 
     /// <remarks>
     /// 🔴 <b>先問版本再取資料</b>，而不是「取到東西就用」。端點名稱可能被別的外掛佔用，

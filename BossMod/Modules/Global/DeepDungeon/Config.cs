@@ -122,6 +122,13 @@ public sealed class AutoDDConfig : ConfigNode
     [PropertyDisplay("Also use PalacePal's own trap data when it is installed",
         tooltip: "BMR ships a snapshot of PalacePal's trap data, but PalacePal itself keeps learning new locations. With this on, whatever PalacePal currently knows for this deep dungeon is merged in on top of the built-in table (duplicates within 1y are dropped).\n\nIf PalacePal is not installed, is disabled, or speaks a version of the interface this build does not know, everything silently falls back to the built-in table - nothing breaks and nothing changes from before.\n\nTraps only. PalacePal's Accursed Hoard records are deliberately not drawn: that list covers all ten floors of the deep dungeon at once, so on a single floor's 5x5 map it lights up almost every room - that is noise, not information. PalacePal also draws its own hoard markers in the world already. The hoards BMR does show come from the objects the game itself places, and are unaffected by this setting.\n\nRead-only - BMR never writes anything back to PalacePal.")]
     public bool UsePalacePal = true;
+
+    // 🔴 預設關（opt-in）。使用者已裁決過「不畫 PalacePal 來源的埋藏寶藏標記」；這裡接的是
+    //    語意不同的新端點（只回當下看得到的實體），但要不要重新亮起來屬於新的裁決，不自己做。
+    //    關著的時候 _palVisibleHoards 恆為空，行為與加這個開關之前逐字相同。
+    [PropertyDisplay("Also show Accursed Hoard that only PalacePal can currently see",
+        tooltip: "BMR already finds the Accursed Hoard itself, straight from the object the game places at the spot, and that is not affected by this setting. This only adds entities that PalacePal can see right now and BMR's own scan did not pick up; anything within 5y of something BMR already found is dropped, so while everything works normally you will see no difference at all.\n\nWhy it exists: BMR skips game objects without a valid network id, while PalacePal reads the object table unfiltered. Whether the unnamed buried-hoard object always carries one cannot be checked outside the game, so this is the fallback for the case where it does not.\n\nThis is NOT PalacePal's location database. That list covers all ten floors of the deep dungeon at once and lights up almost every room, and is still deliberately not drawn. Only what PalacePal can see on this floor, this run, is used, and only while its snapshot is less than a second old.\n\nNeeds 'show the buried Accursed Hoard' above, and does nothing unless PalacePal is installed and speaks its newer 'visible locations' interface. Off by default.\n\nRead-only - BMR never writes anything back to PalacePal.")]
+    public bool UsePalacePalVisibleHoard = false;
     [PropertyDisplay("Automatically navigate to Cairn of Passage")]
     public bool AutoPassage = true;
 

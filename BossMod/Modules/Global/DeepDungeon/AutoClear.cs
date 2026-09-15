@@ -1275,6 +1275,7 @@ public abstract class AutoClear : ZoneModule
         UpdateStopWatchdog();
         UpdateStuckDetection();
         UpdatePalacePal();
+        UpdatePalacePalVisibleHoards();
 
         // 純顯示，不影響任何決策。放在這裡是因為它必須每幀跑，
         // 而且要早於 Plugin.DrawUI 尾端的 Camera.DrawWorldPrimitives。
@@ -3693,6 +3694,55 @@ public abstract class AutoClear : ZoneModule
     private DateTime _palNextRefresh;
     private bool? _palAvailableLogged;
 
+    /// <summary>「現在看得到什麼」重問一次的間隔（秒）。比陷阱那條短：這份是當下的觀測，不是資料庫。</summary>
+    private const double PalaceVisibleRefreshSeconds = 2d;
+
+    /// <summary>可接受的快照年齡（毫秒）。超過就當「不知道」——對方沒在跑時端點照樣回得出舊值。</summary>
+    private const int PalaceVisibleMaxAgeMillis = 1000;
+
+    /// <summary>PalacePal 回報「現在看得到」的埋藏寶藏位置，尚未與 BMR 自己看到的去重。</summary>
+    private Vector3[] _palVisibleHoards = [];
+
+    private DateTime _palVisibleNextRefresh;
+    private bool? _palVisibleLogged;
+
+    /// <summary>
+    /// 向 PalacePal 重新問一次「這一趟這一層現在真的看得到哪些埋藏寶藏」。
+    /// </summary>
+    /// <remarks>
+    /// 🔑 為什麼要問別人：BMR 的 <c>World.Actors</c> 會丟掉 EntityId 無效的物件，而 Dalamud 的
+    /// <c>ObjectTable</c> 不會 —— 埋藏處那個沒名字的事件物件是否一定帶有效 EntityId，離線證不了。
+    /// 🔴 拿不到就整組清空，不留殘值。
+    /// </remarks>
+    private void UpdatePalacePalVisibleHoards()
+    {
+        if (!Config.UsePalacePalVisibleHoard || !Config.ShowAccursedHoard)
+        {
+            _palVisibleHoards = [];
+            _palVisibleNextRefresh = default;
+            _palVisibleLogged = null;
+            return;
+        }
+
+        var now = World.CurrentTime;
+        if (now < _palVisibleNextRefresh)
+            return;
+        _palVisibleNextRefresh = now.AddSeconds(PalaceVisibleRefreshSeconds);
+
+        var territory = (ushort)World.CurrentZone;
+        var hoards = PalacePalIpc.GetVisibleHoards(territory, PalaceVisibleMaxAgeMillis);
+        _palVisibleHoards = hoards?.ToArray() ?? [];
+
+        var available = hoards != null;
+        if (_palVisibleLogged != available)
+        {
+            _palVisibleLogged = available;
+            Service.Logger.Information(available
+                ? $"[DD pal] PalacePal 可見快照可用（區域 {territory}）：現在看得到的埋藏寶藏 {_palVisibleHoards.Length} 個。"
+                : $"[DD pal] PalacePal 可見快照取不到（沒安裝／沒有「現在看得到什麼」那組端點／版本低於 {PalacePalIpc.SupportedVisibleApiVersion}／快照超過 {PalaceVisibleMaxAgeMillis} 毫秒），埋藏寶藏只用 BMR 自己看到的。");
+        }
+    }
+
     /// <summary>
     /// 向 PalacePal 重新要一次這個區域的陷阱座標。
     /// </summary>
@@ -3837,6 +3887,8 @@ public abstract class AutoClear : ZoneModule
     private void CollectHoardActors()
     {
         _hoardActors.Clear();
+        _hoardPalSpots.Clear();
+        _hoardAnyPositions.Clear();
         if (_hoardFound)
             return;
 
@@ -3844,6 +3896,8 @@ public abstract class AutoClear : ZoneModule
         {
             if (a.OID is not ((uint)OID.BandedCofferIndicator or (uint)OID.BandedCoffer))
                 continue;
+            // 🔴 已開過的也要進去重基準，否則 PalacePal 那份會把它重新畫一次。
+            _hoardAnyPositions.Add(a.Position);
             if (_openedChests.Contains(a.InstanceID))
                 continue;
             _hoardActors.Add(a);
@@ -3865,6 +3919,41 @@ public abstract class AutoClear : ZoneModule
                 }
             }
         }
+
+        MergePalVisibleHoards();
+    }
+
+    /// <summary>這一幀所有寶藏 OID 實體的位置（<b>含已開過的</b>），只當去重基準。</summary>
+    private readonly List<WPos> _hoardAnyPositions = [];
+
+    /// <summary>只有 PalacePal 看得到的那幾個埋藏寶藏位置，生命週期與 <see cref="_hoardActors"/> 相同。</summary>
+    private readonly List<Vector3> _hoardPalSpots = [];
+
+    /// <summary>
+    /// 把 PalacePal 看得到、而 BMR 自己沒看到的那幾個補進 <see cref="_hoardPalSpots"/>。
+    /// </summary>
+    /// <remarks>
+    /// 📌 正常情況下這裡一個都留不下來：兩邊讀的是同一張物件表，BMR 掃的範圍還更大。
+    /// 真的留下東西時，log 的「可見快照可用」那行與畫面上多出來的標記就是證據。
+    /// </remarks>
+    private void MergePalVisibleHoards()
+    {
+        for (var i = 0; i < _palVisibleHoards.Length; ++i)
+        {
+            var p = _palVisibleHoards[i];
+            var pos = new WPos(p.X, p.Z);
+            var dup = false;
+            for (var j = 0; j < _hoardAnyPositions.Count; ++j)
+            {
+                if ((_hoardAnyPositions[j] - pos).LengthSq() <= HoardDedupeRangeSq)
+                {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup)
+                _hoardPalSpots.Add(p);
+        }
     }
 
     /// <summary>
@@ -3882,7 +3971,7 @@ public abstract class AutoClear : ZoneModule
             return null;
 
         CollectHoardActors();
-        detected = _hoardActors.Count;
+        detected = _hoardActors.Count + _hoardPalSpots.Count;
 
         if (coords != RoomCoordState.Ok)
             return null;
@@ -3907,6 +3996,21 @@ public abstract class AutoClear : ZoneModule
             var off = new Vector2(d.X * CellPixelsPerYalm, d.Z * CellPixelsPerYalm);
             off = Vector2.Clamp(off, new Vector2(-limit), new Vector2(limit));
             res.Add(new(room, off, a.OID == (uint)OID.BandedCoffer ? HoardKind.Revealed : HoardKind.Buried));
+        }
+
+        // PalacePal 只給座標，分不出埋著還是已現形 ⇒ 一律畫成把握較低的那一態（空心）。
+        for (var i = 0; i < _hoardPalSpots.Count; ++i)
+        {
+            var q = _hoardPalSpots[i];
+            var qpos = new WPos(q.X, q.Z);
+            var qroom = NearestRoom(qpos, RoomTolerance);
+            if (qroom < 0 || RoomCenters[qroom] is not WPos qcenter)
+                continue;
+
+            var qd = qpos - qcenter;
+            var qoff = new Vector2(qd.X * CellPixelsPerYalm, qd.Z * CellPixelsPerYalm);
+            qoff = Vector2.Clamp(qoff, new Vector2(-limit), new Vector2(limit));
+            res.Add(new(qroom, qoff, HoardKind.Buried));
         }
 
         return res;
@@ -3975,6 +4079,8 @@ public abstract class AutoClear : ZoneModule
             var p = _hoardActors[i].PosRot;
             DrawHoardMarker(camera, new Vector3(p.X, p.Y, p.Z));
         }
+        for (var i = 0; i < _hoardPalSpots.Count; ++i)
+            DrawHoardMarker(camera, _hoardPalSpots[i]);
     }
 
     /// <summary>

@@ -8635,5 +8635,11 @@
   },
   "CHANGELOG_RadarContextMenu": {
     "message": "在雷達（或獨立的提示視窗）上按右鍵，現在會開出一個選單：這一場專屬的模組設定、停用目前模組、地圖縮放、最常調的幾個顯示開關，以及鎖定。這件事之所以重要，是因為預設的透明雷達根本沒有標題列，原本放在那裡的齒輪與關閉鈕從來沒有被畫出來——這一場的模組設定過去只能從「支援的戰鬥」分頁一層一層翻進去。在別處按右鍵的行為完全沒變；鎖定雷達一樣會關掉它所有的滑鼠輸入，包含這個選單。"
+  },
+  "Also show Accursed Hoard that only PalacePal can currently see": {
+    "message": "也顯示只有 PalacePal 看得到的埋藏的寶藏"
+  },
+  "BMR already finds the Accursed Hoard itself, straight from the object the game places at the spot, and that is not affected by this setting. This only adds entities that PalacePal can see right now and BMR's own scan did not pick up; anything within 5y of something BMR already found is dropped, so while everything works normally you will see no difference at all.\n\nWhy it exists: BMR skips game objects without a valid network id, while PalacePal reads the object table unfiltered. Whether the unnamed buried-hoard object always carries one cannot be checked outside the game, so this is the fallback for the case where it does not.\n\nThis is NOT PalacePal's location database. That list covers all ten floors of the deep dungeon at once and lights up almost every room, and is still deliberately not drawn. Only what PalacePal can see on this floor, this run, is used, and only while its snapshot is less than a second old.\n\nNeeds 'show the buried Accursed Hoard' above, and does nothing unless PalacePal is installed and speaks its newer 'visible locations' interface. Off by default.\n\nRead-only - BMR never writes anything back to PalacePal.": {
+    "message": "BMR 本來就會自己找出埋藏的寶藏——來源是遊戲放在該處的那個事件物件，這個設定不影響那一份。這裡只補上「PalacePal 現在看得到、而 BMR 自己沒掃到」的那幾個；與 BMR 已經找到的相距 5 碼以內一律丟掉，所以一切正常的時候你完全看不出差別。\n\n為什麼需要它：BMR 會跳過沒有有效網路 ID 的遊戲物件，而 PalacePal 是不過濾地讀整張物件表。埋藏處那個沒有名字的物件是不是一定帶有效 ID，在遊戲外證明不了，這個開關就是為那種情況準備的退路。\n\n這不是 PalacePal 的位置資料庫。那份紀錄是整座深牢十層一起算的，幾乎每一格都會亮，至今仍然刻意不畫。這裡只用 PalacePal 在這一層、這一趟當下看得到的東西，而且只在它的快照不到一秒鐘時才採用。\n\n需要上面的「顯示埋藏的寶藏」開著；沒安裝 PalacePal、或它的版本還沒有「現在看得到什麼」那組介面時，這個開關不做任何事。預設關閉。\n\n唯讀——BMR 絕不回寫任何東西給 PalacePal。"
   }
 }
