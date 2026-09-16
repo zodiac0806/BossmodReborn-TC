@@ -11,7 +11,29 @@
 // - our queue distinguishes GCD and oGCD actions; since oGCDs can be delayed, effective 'expiration' time for oGCDs is much larger than native 0.5s
 // - trying to queue an oGCD action while it is already queued (double tapping) activates 'emergency mode': all preceeding queued actions are removed and this action is returned even if it would delay GCD
 // - entries from the manual queue are added to the autoqueue every frame with appropriate priorities, and usual logic selects best action to execute
-public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
+// ActionManagerEx 在 detour 內（遊戲主執行緒）當幀取樣後交過來的快照：全是值型別，
+// 這一側永遠不持有原生指標。Status 就是 LogMessage 的 row id，0＝遊戲說這一發可以用。
+public readonly record struct ActionBlockInfo(uint Status, bool RecastActive, float GCDRemaining, float AnimationLock, float CastRemaining, bool Moving, bool MovementBlocked, float Range, float Distance, bool HasTarget)
+{
+    // 節流用的穩定鍵：只取離散成分 —— 動畫鎖與距離每幀都在變，放進鍵等於完全沒有節流
+    public uint BlockKey => Status
+        | (RecastActive ? 0x01000000u : 0u)
+        | (AnimationLock > 0 ? 0x02000000u : 0u)
+        | (CastRemaining > 0 ? 0x04000000u : 0u)
+        | (Moving ? 0x08000000u : 0u)
+        | (MovementBlocked ? 0x10000000u : 0u)
+        | (HasTarget ? 0u : 0x20000000u)
+        | (Range > 0 && Distance > Range ? 0x40000000u : 0u);
+
+    public string Describe()
+    {
+        var status = Status != 0 ? $"status {Status} '{Service.LuminaRow<Lumina.Excel.Sheets.LogMessage>(Status)?.Text}'" : "status 0（遊戲說這一發可以用）";
+        var tgt = !HasTarget ? "無目標" : Range > 0 ? $"dist={Distance:f2}/range={Range:f0}{(Distance > Range ? " 超出範圍" : "")}" : $"dist={Distance:f2}";
+        return $"{status}, recast={(RecastActive ? "on" : "off")}, GCD={GCDRemaining:f2}, aLock={AnimationLock:f2}, cast={CastRemaining:f2}, moving={Moving}, moveBlocked={MovementBlocked}, {tgt}";
+    }
+}
+
+public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints, Func<ActionID, Actor?, ActionBlockInfo>? describeBlockers = null)
 {
     private readonly record struct Entry(ActionID Action, Actor? Target, Vector3 TargetPos, Angle? FacingAngle, ActionDefinition Definition, DateTime ExpireAt, float CastTime)
     {
@@ -22,11 +44,21 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
     private readonly List<Entry> _queue = [];
     private bool _emergencyMode;
 
+    // 節流：同一支技能、同一組拒絕原因，EmergencyLogInterval 秒內只印一次。原因變了、換技能、
+    // 或送出去／過期時立刻重置，所以「原因變了」與「恢復正常」都不會被吃掉；
+    // 「卡了多久」則由 FlushEmergencyLog 的收尾行保住。
+    private const double EmergencyLogInterval = 5;
+    private ActionID _emergencyLogAction;
+    private uint _emergencyLogKey;
+    private DateTime _emergencyLogTime;
+    private int _emergencySuppressed;
+
     public void RemoveExpired()
     {
         if (_emergencyMode && _queue[0].Expired(ws.CurrentTime))
         {
             Service.Log($"[MAO] Emergency {_queue[0].Action} expired");
+            FlushEmergencyLog(_queue[0].Action, "expired");
             _emergencyMode = false;
         }
 
@@ -98,7 +130,8 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         }
         else
         {
-            Service.Log($"[MAO] Entering emergency mode for {e.Action}");
+            // 這是「e.Action == action && e.Target == target」的 else，兩者可互換
+            LogEmergency(action, target, def);
             // spamming oGCD - enter emergency mode
             _queue.Clear();
             _queue.Add(new(action, target, targetPos, angleOverride, def, expireAt, castTime));
@@ -114,10 +147,44 @@ public sealed class ManualActionQueueTweak(WorldState ws, AIHints hints)
         {
             Service.Log($"[MAO] Executed {action}");
             _queue.RemoveAt(index);
+            FlushEmergencyLog(action, "executed");
         }
 
         if (_emergencyMode && index == 0)
             _emergencyMode = false;
+    }
+
+    private void LogEmergency(ActionID action, Actor? target, ActionDefinition def)
+    {
+        var info = describeBlockers?.Invoke(action, target);
+        if (info != null)
+            info = info.Value with { Range = def.Range };
+
+        var key = info?.BlockKey ?? 0u;
+        var now = ws.CurrentTime;
+        var sameCause = action == _emergencyLogAction && key == _emergencyLogKey;
+        if (sameCause && (now - _emergencyLogTime).TotalSeconds < EmergencyLogInterval)
+        {
+            ++_emergencySuppressed;
+            return;
+        }
+
+        var repeats = sameCause ? $"（前 {(now - _emergencyLogTime).TotalSeconds:f0}s 內另有 {_emergencySuppressed} 次同因未印）" : "";
+        _emergencyLogAction = action;
+        _emergencyLogKey = key;
+        _emergencyLogTime = now;
+        _emergencySuppressed = 0;
+        Service.Log($"[MAO] Entering emergency mode for {action}: {info?.Describe() ?? "拒絕原因不可得"}{repeats}");
+    }
+
+    // 有了節流之後「數 log 行數」不再等於「卡了多久」，所以結束時把吞掉的次數補報一行
+    private void FlushEmergencyLog(ActionID action, string outcome)
+    {
+        if (_emergencySuppressed > 0)
+            Service.Log($"[MAO] Emergency {action} {outcome}，期間另有 {_emergencySuppressed} 次同因未印");
+        _emergencyLogAction = default;
+        _emergencyLogKey = 0;
+        _emergencySuppressed = 0;
     }
 
     private bool ResolveTarget(ActionDefinition def, Actor player, ulong targetId, Func<(ulong, Vector3?)> getAreaTarget, Func<ulong> targetNearest, bool allowSmartTarget, out Actor? target, out Vector3 targetPos)

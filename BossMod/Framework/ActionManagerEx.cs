@@ -106,7 +106,7 @@ public sealed unsafe class ActionManagerEx : IDisposable
         _ws = ws;
         _hints = hints;
         _movement = movement;
-        _manualQueue = new(ws, hints);
+        _manualQueue = new(ws, hints, DescribeActionBlockers);
         _cancelCastTweak = new(ws, hints);
         _dismountTweak = new(ws);
         _smartRotationTweak = new(ws, hints);
@@ -291,6 +291,15 @@ public sealed unsafe class ActionManagerEx : IDisposable
         if (action.Type is ActionType.BozjaHolsterSlot0 or ActionType.BozjaHolsterSlot1)
             action = BozjaActionID.GetHolster(action.As<BozjaHolsterID>()); // see BozjaContentDirector.useFromHolster
         return _inst->GetActionStatus((CSActionType)action.Type, action.ID, target, checkRecastActive, checkCastingActive, outOptExtraInfo);
+    }
+
+    // 純診斷：在 detour 內（遊戲主執行緒）當幀取樣，抄成值型別交出去，呼叫端不持有原生指標。
+    // 不參與任何判斷，所以取不到就留預設值；Range 由呼叫端用它自己手上的定義補。
+    private ActionBlockInfo DescribeActionBlockers(ActionID action, Actor? target)
+    {
+        var player = _ws.Party.Player();
+        return new(GetActionStatus(action, target?.InstanceID ?? InvalidEntityId), IsRecastTimerActive(action), GCD(), EffectiveAnimationLock, CastTimeRemaining,
+            _movement.IsMoving(), _movement.MovementBlocked, 0, target != null ? player?.DistanceToHitbox(target) ?? 0 : 0, target != null);
     }
 
     // returns time in ms
