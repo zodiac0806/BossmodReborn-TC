@@ -508,6 +508,7 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
     /// <remarks>
     /// 🔴 讓位期間本 AI <b>完全不設</b> <c>NaviTargetPos</c>。若角色同時也不動，代表接手的那一方
     /// 也沒有寫出方向 —— 那就是「兩邊都不動」的殭屍狀態，必須看這一行才分得出來是誰的問題。
+    /// <para>⚠️ 換手若只是因為「沒有人要求移動」（<see cref="Autorotation.MiscAI.NormalMovement.IdleNoDestination"/>）就走 <c>Verbose</c>：那是閒置常態，而且對應的 <c>[NormalMovement]</c> 說明行也降了同一級。</para>
     /// </remarks>
     private void LogMovementOwnership(bool yield)
     {
@@ -527,9 +528,13 @@ sealed class AIBehaviour(AIController ctrl, RotationModuleManager autorot, Prese
             explain = !_explainedTakeBackMovement;
             _explainedTakeBackMovement = true;
         }
-        Service.Logger.Information(yield
+        var msg = yield
             ? (explain ? "[AI] 移動擁有權交給預設集的「自動移動」模組：本 AI 這段期間完全不設導航目標。若角色同時站著不動，代表接手的那一方也沒寫出移動方向。" : "[AI] 移動擁有權交給預設集的「自動移動」模組")
-            : (explain ? "[AI] 移動擁有權回到 AI 自動走位：預設集裡的「自動移動」模組沒有舉手（不在預設集裡、Destination 軌設成 None、或它這一段算不出目的地而主動交還——後者上一行會有 [NormalMovement] 的說明）。" : "[AI] 移動擁有權回到 AI 自動走位"));
+            : (explain ? "[AI] 移動擁有權回到 AI 自動走位：預設集裡的「自動移動」模組沒有舉手（不在預設集裡、Destination 軌設成 None、或它這一段算不出目的地而主動交還——後者上一行會有同級的 [NormalMovement] 說明）。" : "[AI] 移動擁有權回到 AI 自動走位");
+        if (Autorotation.MiscAI.NormalMovement.IdleNoDestination)
+            Service.Logger.Verbose(msg);
+        else
+            Service.Logger.Information(msg);
     }
 
     /// <summary>建導航決策那一刻場上有幾個目標區；給下面那支診斷區分「沒人給方向」與「給了方向但算不出來」。</summary>

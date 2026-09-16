@@ -83,6 +83,10 @@ public sealed class NormalMovement : RotationModule
     /// </remarks>
     public static bool OwnsMovement => Instance?._ownsMovement ?? false;
 
+    /// <summary>目前這一段交還擁有權的原因是「沒有人要求移動」（閒置常態）。</summary>
+    /// <remarks>給 <c>AIBehaviour.LogMovementOwnership</c> 挑 log 等級用：兩邊講的是同一次換手，只降一邊會讓另一邊變成沒有說明的孤兒行。</remarks>
+    public static bool IdleNoDestination => Instance?._idleNoDestination ?? false;
+
     /// <summary>
     /// 把移動擁有權放下。由 <c>RotationModuleManager.Update</c> 在跑模組迴圈<b>之前</b>呼叫，
     /// 本模組若這一幀真的有跑，會在 <see cref="Execute"/> 最前面重新舉手。
@@ -480,6 +484,9 @@ public sealed class NormalMovement : RotationModule
     /// <summary>上一次記過的「這一段有沒有目的地」；用來只在<b>狀態翻轉</b>時記一行 log。</summary>
     private bool _loggedNoDestination;
 
+    /// <summary>目前這一段「算不出目的地」是閒置（沒有人要求移動）＝兩行 log 都走 Verbose。</summary>
+    private bool _idleNoDestination;
+
     /// <summary>從哪一刻起連續算不出目的地；null＝上一次算得出來。</summary>
     private DateTime? _noDestinationSince;
 
@@ -531,6 +538,7 @@ public sealed class NormalMovement : RotationModule
     /// <see cref="NavigationDecision.DiagSummary"/>，那裡有本次尋路真正看到的數字。
     /// 📌 走 <c>Information</c>：使用者的 LogLevel 是 1，盲區只有 Verbose,Debug 收得到但單檔數十萬行會淹沒。
     /// 🔴 只在翻轉時印。這支每幀都會被呼叫到。
+    /// <para>⚠️ 例外：<see cref="NavigationDecision.DiagIdleNoGoals"/>＝沒有人要求移動，是閒置常態而不是故障，走 <c>Verbose</c>。成對的復原行要跟著同一級，否則會留下沒有起頭的孤兒行。</para>
     /// </remarks>
     private void LogNoDestination(bool stuck, in NavigationDecision navi, float heldFor)
     {
@@ -542,13 +550,23 @@ public sealed class NormalMovement : RotationModule
             // 遲滯吞掉的次數要報出來：它就是「本來會發生幾次換手」的規模，也是下一輪判斷
             // NoDestinationHoldSeconds 該不該調整的唯一離線依據。
             var suppressed = _noDestinationSuppressed;
-            Service.Logger.Information(
-                $"[NormalMovement] 已連續 {heldFor:f1}s 算不出目的地（遲滯門檻 {NoDestinationHoldSeconds:f1}s、" +
-                $"期間吞掉 {suppressed} 幀），移動擁有權交還給 AI 自動走位：{navi.DiagSummary()}");
+            // 「沒有人要求移動」是閒置常態,實測佔這一行的多數 ⇒ 降 Verbose,
+            // Information 只留真正算不出目的地的那幾種。復原行沿用同一級以維持成對。
+            _idleNoDestination = navi.DiagIdleNoGoals;
+            var opened = $"[NormalMovement] 已連續 {heldFor:f1}s 算不出目的地（遲滯門檻 {NoDestinationHoldSeconds:f1}s、" +
+                $"期間吞掉 {suppressed} 幀），移動擁有權交還給 AI 自動走位：{navi.DiagSummary()}";
+            if (_idleNoDestination)
+                Service.Logger.Verbose(opened);
+            else
+                Service.Logger.Information(opened);
         }
         else
         {
-            Service.Logger.Information("[NormalMovement] 重新算得出目的地，移動擁有權回到「自動移動」模組。");
+            const string closed = "[NormalMovement] 重新算得出目的地，移動擁有權回到「自動移動」模組。";
+            if (_idleNoDestination)
+                Service.Logger.Verbose(closed);
+            else
+                Service.Logger.Information(closed);
         }
     }
 

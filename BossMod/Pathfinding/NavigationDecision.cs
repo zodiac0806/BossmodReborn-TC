@@ -78,6 +78,10 @@ public struct NavigationDecision
     /// </list>
     /// </para>
     /// </remarks>
+    /// <summary>這一次算不出目的地的原因是「場上根本沒有目標區」＝<b>沒有人要求移動</b>（閒置常態）。</summary>
+    /// <remarks>🔴 條件與 <see cref="DiagSummary"/> 裡「場上沒有任何目標區」那一支<b>逐字相同</b>，改一邊要改另一邊。</remarks>
+    public readonly bool DiagIdleNoGoals => DiagPlayerInWindow && !DiagGoalsRasterized && DiagGoalZones == 0;
+
     public readonly string DiagSummary()
     {
         var why = !DiagPlayerInWindow
