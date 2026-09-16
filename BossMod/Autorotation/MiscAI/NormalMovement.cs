@@ -497,35 +497,13 @@ public sealed class NormalMovement : RotationModule
     /// 「算不出目的地」要連續持續這麼久，才真的把移動擁有權交還給舊的 AI 走位（秒）。
     /// </summary>
     /// <remarks>
-    /// 🔴🔴 <b>沒有這道遲滯的話，.57 修好「永久卡死」的同時會把 .52 修好的「角色抖動」放回來。</b>
-    /// 實機 2026-08-14 深牢 61~70 層一小時的 log 直接量到了：
-    /// <list type="bullet">
-    /// <item>完整的「交還→拿回」循環 <b>1578 次</b>（[NormalMovement] 那兩行各 1578／1766 筆）。</item>
-    /// <item>拿回擁有權的那一段有多短：<b>p25 只有 20ms、中位數 86ms</b>——也就是 1~5 幀。
-    /// 20ms 的「我沒有意見」不是判斷，是雜訊。</item>
-    /// <item>交還的那一段中位數 137ms。兩邊都短 ⇒ 每秒鐘換手好幾次。</item>
-    /// </list>
-    /// 換手為什麼會表現成走走停停：兩邊<b>不是同一個尋路</b>——
-    /// <c>AIBehaviour.BuildNavigationDecision</c> 會另外加自己的目標區（閃避方向偏好、
-    /// pre-dodge 錨點、跟隨主人），而且用的是 <c>_config.PreferredDistance</c> 當禁區緩衝，
-    /// 本模組用的是 <see cref="Track.ForbiddenZoneCushion"/>。不同的權重場＝不同的目的地，
-    /// 於是每次換手方向就跳一次。它還跑在 <c>Task.Run</c> 的接續上，用的是<b>上一幀</b>的決策。
-    /// 使用者若把 AI 的 <c>MoveDelay</c> 調成非 0，每次「null→非 null」還會重新起算一次延遲
-    /// （<c>AIBehaviour.cs</c> 的 <c>_navStartTime</c>），那就變成每次換手都真的站住。
-    /// <para>
-    /// 🔑 取 0.5 秒的理由：它要大於「雜訊」又要遠小於「真的卡住」。實測雜訊窗 p90 是 656ms 的
-    /// 拿回段與 137ms 的交還段；而 .56 那次真正的卡死是<b>七分鐘</b>零翻轉。0.5 秒把 p25=20ms
-    /// 這一類全部濾掉，同時讓真卡死在半秒內就交出去——兩個量級差了三個數量級，不是險勝。
-    /// </para>
-    /// <para>
-    /// ⚠️ 遲滯期間本模組仍然持有擁有權而且不寫方向＝角色站著不動，最多半秒。這是刻意的取捨：
-    /// 相對於「每秒換手好幾次」，半秒的靜止對使用者是<b>更小</b>的干擾，而且只發生在尋路真的
-    /// 算不出東西的時候。
-    /// </para>
-    /// <para>
-    /// 📌 這道遲滯<b>只擋降級</b>：一算得出目的地就立刻拿回擁有權，不等任何時間。
-    /// 與深牢座標閘門 <c>CoordGateHoldSeconds</c> 是同一套設計，理由也相同。
-    /// </para>
+    /// 🔴 不能拿掉：沒有這道遲滯，「永久卡死」與「角色走走停停」只能二選一。
+    /// 會抖是因為兩邊不是同一個尋路——<c>AIBehaviour.BuildNavigationDecision</c> 另外加自己的
+    /// 目標區，禁區緩衝也用 <c>_config.PreferredDistance</c> 而不是
+    /// <see cref="Track.ForbiddenZoneCushion"/> ⇒ 不同的權重場＝不同的目的地，每次換手方向就跳。
+    /// <para>值的契約：要大於「換手雜訊」、遠小於「真的卡住」，兩者差三個數量級，不是險勝。</para>
+    /// <para>⚠️ 遲滯期間仍持有擁有權且不寫方向＝角色最多站住這麼久，是刻意的取捨。</para>
+    /// <para>📌 只擋降級：一算得出目的地就立刻拿回，不等任何時間（同 <c>CoordGateHoldSeconds</c>）。</para>
     /// </remarks>
     private const float NoDestinationHoldSeconds = 0.5f;
 
