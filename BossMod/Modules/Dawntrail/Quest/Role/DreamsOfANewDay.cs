@@ -155,7 +155,7 @@ public abstract class DreamsOfANewDay(WorldState ws, Actor primary) : BossModule
         Arena.Actors(Enemies(all));
     }
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is { } p && p.InCombat;
 }
 
 sealed class DreamsOfANewDayP1States(BossModule module) : DreamsOfANewDayStates(module) { }

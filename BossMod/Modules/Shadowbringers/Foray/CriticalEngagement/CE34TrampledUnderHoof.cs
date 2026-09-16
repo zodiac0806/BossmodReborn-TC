@@ -182,5 +182,5 @@ public sealed class CE34TrampledUnderHoof(WorldState ws, Actor primary) : BossMo
         }
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 25f);
 }

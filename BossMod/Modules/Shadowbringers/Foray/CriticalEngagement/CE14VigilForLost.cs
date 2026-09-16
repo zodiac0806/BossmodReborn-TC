@@ -61,5 +61,5 @@ public sealed class CE14VigilForLost(WorldState ws, Actor primary) : BossModule(
 {
     private static readonly ArenaBoundsComplex arena = new([new Polygon(new(451f, 830f), 29.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 30f);
 }

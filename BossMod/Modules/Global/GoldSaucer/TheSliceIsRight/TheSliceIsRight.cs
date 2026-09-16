@@ -118,7 +118,7 @@ sealed class TheSliceIsRightStates : StateMachineBuilder
         TrivialPhase()
             .ActivateOnEnter<BambooSplits>()
             .ActivateOnEnter<DaigoroGilJump>()
-            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed || !module.InBounds(module.Raid.Player()!.Position);
+            .Raw.Update = () => module.PrimaryActor.IsDeadOrDestroyed || (module.Raid.Player() is { } p && !module.InBounds(p.Position));
     }
 }
 
@@ -126,5 +126,5 @@ sealed class TheSliceIsRightStates : StateMachineBuilder
 public sealed class TheSliceIsRight(WorldState ws, Actor primary) : BossModule(ws, primary, arena.Center, arena)
 {
     private static readonly ArenaBoundsComplex arena = new([new Polygon(new(70.5f, -36f), 15f * CosPI.Pi28th, 28)]);
-    protected override bool CheckPull() => InBounds(Raid.Player()!.Position); // only activate module if player is taking part in the event
+    protected override bool CheckPull() => Raid.Player() is { } p && InBounds(p.Position); // only activate module if player is taking part in the event
 }

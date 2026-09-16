@@ -147,5 +147,5 @@ public class LunarOdinStates : StateMachineBuilder
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, GroupType = BossModuleInfo.GroupType.Quest, GroupID = 69602, NameID = 10034)]
 public class LunarOdin(WorldState ws, Actor primary) : BossModule(ws, primary, new(146.5f, 84.5f), new ArenaBoundsCircle(20f))
 {
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is { } p && p.InCombat;
 }

@@ -160,5 +160,5 @@ public sealed class CE11ShadowOfDeathHand(WorldState ws, Actor primary) : BossMo
         Arena.Actors(Enemies((uint)OID.TamedCarrionCrow));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 30f);
 }

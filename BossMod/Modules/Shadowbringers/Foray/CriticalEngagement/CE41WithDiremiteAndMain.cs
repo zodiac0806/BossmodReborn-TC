@@ -217,5 +217,5 @@ public class CE41WithDiremiteAndMain(WorldState ws, Actor primary) : BossModule(
         Arena.Actors(filteredcrystals, Colors.Object, true);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 30f);
 }

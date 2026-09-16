@@ -51,5 +51,5 @@ sealed class ProactiveMunition(BossModule module) : Components.StandardChasingAO
 [ModuleInfo(BossModuleInfo.Maturity.Contributed, Contributors = "SourP", GroupType = BossModuleInfo.GroupType.BozjaDuel, GroupID = 778, NameID = 23)] // bnpcname=9695
 public sealed class Duel5Menenius(WorldState ws, Actor primary) : BossModule(ws, primary, new(-810f, 520f), new ArenaBoundsSquare(20f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InSquare(Arena.Center, 20f);
 }

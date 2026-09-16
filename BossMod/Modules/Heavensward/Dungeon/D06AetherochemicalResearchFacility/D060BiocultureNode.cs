@@ -180,7 +180,7 @@ public class D060BiocultureNode(WorldState ws, Actor primary) : BossModule(ws, p
     public static readonly uint[] Trash2 = [(uint)OID.Boss, (uint)OID.CulturedChimera, (uint)OID.BiocultureNode, (uint)OID.CulturedReptoid, (uint)OID.CulturedMirrorknight,
     (uint)OID.Biohazard];
 
-    protected override bool CheckPull() => InBounds(Raid.Player()!.Position);
+    protected override bool CheckPull() => Raid.Player() is { } p && InBounds(p.Position);
 
     protected override void DrawEnemies(int pcSlot, Actor pc)
     {

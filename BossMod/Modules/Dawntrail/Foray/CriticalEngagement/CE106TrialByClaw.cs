@@ -73,5 +73,5 @@ public sealed class CE106TrialByClaw(WorldState ws, Actor primary) : BossModule(
 {
     private static readonly ArenaBoundsComplex arena = new([new Polygon(new(-413.9f, 75f), 24.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 25f);
 }

@@ -71,5 +71,5 @@ public sealed class FangsOfTheViper(WorldState ws, Actor primary) : BossModule(w
         Arena.Actors(Enemies(all));
     }
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is { } p && p.InCombat;
 }

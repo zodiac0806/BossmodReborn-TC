@@ -254,7 +254,7 @@ public abstract class Trash1Arena(WorldState ws, Actor primary, bool savage) : B
                 break;
             }
         }
-        return inCombat && !Raid.Player()!.IsDead;
+        return inCombat && Raid.Player() is { } p && !p.IsDead;
     }
 
     protected override void DrawEnemies(int pcSlot, Actor pc)

@@ -176,5 +176,5 @@ public sealed class CE111SharkAttack(WorldState ws, Actor primary) : BossModule(
         Arena.Actor(PrimaryActor);
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 20f);
 }

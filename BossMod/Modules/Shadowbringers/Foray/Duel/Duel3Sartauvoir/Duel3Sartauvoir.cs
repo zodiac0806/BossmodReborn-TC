@@ -33,5 +33,5 @@ sealed class Backdraft(BossModule module) : Components.SimpleKnockbacks(module, 
 [ModuleInfo(BossModuleInfo.Maturity.Verified, Contributors = "The Combat Reborn Team (Malediktus)", GroupType = BossModuleInfo.GroupType.BozjaDuel, GroupID = 735, NameID = 12)]
 public sealed class Duel3Sartauvoir(WorldState ws, Actor primary) : BossModule(ws, primary, new(-15f, 145f), new ArenaBoundsSquare(18f))
 {
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InSquare(Arena.Center, 20f);
 }

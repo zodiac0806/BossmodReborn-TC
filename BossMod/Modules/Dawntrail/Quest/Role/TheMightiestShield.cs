@@ -252,5 +252,5 @@ public sealed class TheMightiestShield(WorldState ws, Actor primary) : BossModul
         Arena.Actors(Enemies(all));
     }
 
-    protected override bool CheckPull() => Raid.Player()!.InCombat;
+    protected override bool CheckPull() => Raid.Player() is { } p && p.InCombat;
 }

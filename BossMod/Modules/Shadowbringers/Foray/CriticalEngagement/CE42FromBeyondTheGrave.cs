@@ -240,5 +240,5 @@ public class CE42FromBeyondTheGrave(WorldState ws, Actor primary) : BossModule(w
         Arena.Actors(Enemies((uint)OID.DyunbuTheAccursed));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 30f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 30f);
 }

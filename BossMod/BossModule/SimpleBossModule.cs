@@ -8,7 +8,7 @@ public abstract class SimpleBossModule(WorldState ws, Actor primary) : BossModul
 
     public override bool CheckReset() => !PrimaryActor.InCombat;
 
-    protected override bool CheckPull() => base.CheckPull() && (PrimaryActor.Position - Raid.Player()!.Position).LengthSq() < 900f;
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && (PrimaryActor.Position - p.Position).LengthSq() < 900f;
 
     protected override void UpdateModule()
     {

@@ -30,5 +30,5 @@ public sealed class Duel2Lyon(WorldState ws, Actor primary) : BossModule(ws, pri
     private static readonly ArenaBoundsComplex startingArena = new([new Polygon(new(211f, 380f), 24.5f, 32)]);
     public static readonly ArenaBoundsCircle DefaultArena = new(20f); // default arena got no extra collision, just a donut aoe
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 25f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 25f);
 }

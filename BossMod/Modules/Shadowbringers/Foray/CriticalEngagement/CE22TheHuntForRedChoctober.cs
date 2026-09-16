@@ -221,5 +221,5 @@ public sealed class CE22TheHuntForRedChoctober(WorldState ws, Actor primary) : B
 {
     private static readonly ArenaBoundsComplex arena = new([new Polygon(new(393f, 268f), 19.5f, 32)]);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 20f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 20f);
 }

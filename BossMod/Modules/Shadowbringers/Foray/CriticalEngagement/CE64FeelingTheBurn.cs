@@ -246,5 +246,5 @@ public sealed class CE64FeelingTheBurn(WorldState ws, Actor primary) : BossModul
         Arena.Actors(Enemies((uint)OID.Escort2));
     }
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InSquare(Arena.Center, 24f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InSquare(Arena.Center, 24f);
 }

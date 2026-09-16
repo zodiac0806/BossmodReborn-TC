@@ -268,5 +268,5 @@ public sealed class CE104NoiseComplaint(WorldState ws, Actor primary) : BossModu
 {
     public static readonly WPos ArenaCenter = new(461f, -363f);
 
-    protected override bool CheckPull() => base.CheckPull() && Raid.Player()!.Position.InCircle(Arena.Center, 23f);
+    protected override bool CheckPull() => base.CheckPull() && Raid.Player() is { } p && p.Position.InCircle(Arena.Center, 23f);
 }
