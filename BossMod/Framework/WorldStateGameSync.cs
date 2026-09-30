@@ -74,7 +74,7 @@ sealed class WorldStateGameSync : IDisposable
 
     private readonly unsafe delegate* unmanaged<ContainerInterface*, float> _calculateMoveSpeedMulti;
 
-    private unsafe delegate void ProcessMapEffectDelegate(byte* data);
+    private unsafe delegate void ProcessMapEffectDelegate(void* director, byte* packet);
 
     private readonly Hook<ProcessMapEffectDelegate> _processMapEffect1Hook;
     private readonly Hook<ProcessMapEffectDelegate> _processMapEffect2Hook;
@@ -155,12 +155,16 @@ sealed class WorldStateGameSync : IDisposable
         _calculateMoveSpeedMulti = (delegate* unmanaged<ContainerInterface*, float>)Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 44 0F 28 D8 45 0F 57 D2");
         Service.Log($"[WSG] CalculateMovementSpeedMultiplier address = 0x{(nint)_calculateMoveSpeedMulti:X}");
 
-        var processMapEffectAddr = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 4C 8D 47 10 8B D6 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8D 4F 10 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 4C 8D 47 10 8B D6 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8D 4F 10 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8D 4F 10 BA ?? ?? ?? ??");
-        _processMapEffect1Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(processMapEffectAddr, ProcessMapEffect1Detour);
+        // 2026-09 台服更新後,MapEffect 處理函式從「E8/E9 跳板鏈」改成三個各自獨立、參數為 (director, packet) 的函式
+        // (與國際服同構,間距 0x110)。舊簽名（跳板鏈）已不存在,會讓整個插件在建構子丟 KeyNotFoundException。
+        var mapEffectAddrs = Service.SigScanner.ScanAllText("40 55 41 57 48 83 EC ?? 48 83 B9");
+        if (mapEffectAddrs.Length != 3)
+            throw new InvalidOperationException($"expected 3 matches for multi-MapEffect handlers, but got {mapEffectAddrs.Length}");
+        _processMapEffect1Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[0], ProcessMapEffect1Detour);
         _processMapEffect1Hook.Enable();
-        _processMapEffect2Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(processMapEffectAddr + 0x40, ProcessMapEffect2Detour);
+        _processMapEffect2Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[1], ProcessMapEffect2Detour);
         _processMapEffect2Hook.Enable();
-        _processMapEffect3Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(processMapEffectAddr + 0x80, ProcessMapEffect3Detour);
+        _processMapEffect3Hook = Service.Hook.HookFromAddress<ProcessMapEffectDelegate>(mapEffectAddrs[2], ProcessMapEffect3Detour);
         _processMapEffect3Hook.Enable();
         Service.Log($"[WSG] MapEffect addresses = 0x{_processMapEffect1Hook.Address:X}, 0x{_processMapEffect2Hook.Address:X}, 0x{_processMapEffect3Hook.Address:X}");
     }
@@ -1442,12 +1446,12 @@ sealed class WorldStateGameSync : IDisposable
         return res;
     }
 
-    private unsafe void ProcessMapEffect1Detour(byte* data)
+    private unsafe void ProcessMapEffect1Detour(void* director, byte* packet)
     {
-        _processMapEffect1Hook.OriginalDisposeSafe(data);
+        _processMapEffect1Hook.OriginalDisposeSafe(director, packet);
         try
         {
-            ProcessMapEffect(data, 10, 18);
+            ProcessMapEffect(packet, 10, 18);
         }
         catch (Exception ex)
         {
@@ -1455,12 +1459,12 @@ sealed class WorldStateGameSync : IDisposable
         }
     }
 
-    private unsafe void ProcessMapEffect2Detour(byte* data)
+    private unsafe void ProcessMapEffect2Detour(void* director, byte* packet)
     {
-        _processMapEffect2Hook.OriginalDisposeSafe(data);
+        _processMapEffect2Hook.OriginalDisposeSafe(director, packet);
         try
         {
-            ProcessMapEffect(data, 18, 34);
+            ProcessMapEffect(packet, 18, 34);
         }
         catch (Exception ex)
         {
@@ -1468,12 +1472,12 @@ sealed class WorldStateGameSync : IDisposable
         }
     }
 
-    private unsafe void ProcessMapEffect3Detour(byte* data)
+    private unsafe void ProcessMapEffect3Detour(void* director, byte* packet)
     {
-        _processMapEffect3Hook.OriginalDisposeSafe(data);
+        _processMapEffect3Hook.OriginalDisposeSafe(director, packet);
         try
         {
-            ProcessMapEffect(data, 26, 50);
+            ProcessMapEffect(packet, 26, 50);
         }
         catch (Exception ex)
         {
